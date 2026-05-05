@@ -145,4 +145,42 @@ exports.login = async (req, res) => {
   }
 };
 
+exports.motDePasseOublie = async (req, res) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ message: 'Email requis' });
+
+  try {
+    const [[user]] = await pool.query('SELECT * FROM users WHERE email = ?', [email]);
+    if (!user) return res.status(404).json({ message: 'Aucun compte avec cet email' });
+
+    const code = genererCode();
+    const expiration = new Date(Date.now() + 15 * 60 * 1000);
+    await pool.query(
+      'UPDATE users SET code_verification = ?, code_expiration = ? WHERE id = ?',
+      [code, expiration, user.id]
+    );
+
+    await mailer.sendMail({
+      from: `"StudyMate AI" <${process.env.GMAIL_USER}>`,
+      to: email,
+      subject: 'Réinitialisation de ton mot de passe StudyMate',
+      html: `
+        <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:2rem">
+          <h2 style="color:#1D9E75">Réinitialisation de mot de passe</h2>
+          <p>Voici ton code de réinitialisation :</p>
+          <div style="font-size:36px;font-weight:700;letter-spacing:8px;color:#1D9E75;padding:1rem;background:#E1F5EE;border-radius:8px;text-align:center;margin:1.5rem 0">
+            ${code}
+          </div>
+          <p style="color:#888;font-size:13px">Ce code expire dans 15 minutes.</p>
+        </div>
+      `
+    });
+
+    res.json({ message: 'Code envoyé', email });
+  } catch (err) {
+    console.error('ERREUR MOT DE PASSE OUBLIE:', err.message);
+    res.status(500).json({ message: 'Erreur serveur', error: err.message });
+  }
+};
+
 exports.me = async (req, res) => res.json({ user: req.user });

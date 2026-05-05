@@ -5,6 +5,7 @@ import Navbar from './components/Navbar';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import VerifierEmail from './pages/VerifierEmail';
+import MotDePasseOublie from './pages/MotDePasseOublie';
 import Dashboard from './pages/Dashboard';
 import MesCours from './pages/MesCours';
 import DetailCours from './pages/DetailCours';
@@ -19,6 +20,7 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/verifier-email" element={<VerifierEmail />} />
+          <Route path="/mot-de-passe-oublie" element={<MotDePasseOublie />} />
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/cours" element={<ProtectedRoute><MesCours /></ProtectedRoute>} />
           <Route path="/cours/:id" element={<ProtectedRoute><DetailCours /></ProtectedRoute>} />
