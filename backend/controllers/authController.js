@@ -56,6 +56,7 @@ exports.register = async (req, res) => {
     await envoyerCodeEmail(email, nom, code);
     res.status(201).json({ message: 'Inscription réussie, vérifie ton email', email });
   } catch (err) {
+    console.error('ERREUR REGISTER:', err.message);
     res.status(500).json({ message: 'Erreur serveur', error: err.message });
   }
 };
@@ -87,6 +88,7 @@ exports.verifierCode = async (req, res) => {
 
     res.json({ token, user: { id: user.id, nom: user.nom, email: user.email, filiere: user.filiere, niveau: user.niveau } });
   } catch (err) {
+    console.error('ERREUR VERIFIER CODE:', err.message);
     res.status(500).json({ message: 'Erreur serveur', error: err.message });
   }
 };
@@ -107,6 +109,7 @@ exports.renvoyerCode = async (req, res) => {
     await envoyerCodeEmail(email, user.nom, code);
     res.json({ message: 'Nouveau code envoyé' });
   } catch (err) {
+    console.error('ERREUR RENVOYER CODE:', err.message);
     res.status(500).json({ message: 'Erreur serveur', error: err.message });
   }
 };
@@ -137,6 +140,7 @@ exports.login = async (req, res) => {
 
     res.json({ token, user: { id: user.id, nom: user.nom, email: user.email, filiere: user.filiere, niveau: user.niveau } });
   } catch (err) {
+    console.error('ERREUR LOGIN:', err.message);
     res.status(500).json({ message: 'Erreur serveur', error: err.message });
   }
 };
