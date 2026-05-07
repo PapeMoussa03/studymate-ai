@@ -8,11 +8,25 @@ const pool = mysql.createPool({
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
   waitForConnections: true,
-  connectionLimit: 10,
+  connectionLimit: 5,
+  queueLimit: 0,
   enableKeepAlive: true,
-  keepAliveInitialDelay: 0,
-  connectTimeout: 30000,
+  keepAliveInitialDelay: 10000,
+  connectTimeout: 60000,
+  acquireTimeout: 60000,
+  timeout: 60000,
+  reconnect: true,
   ssl: { rejectUnauthorized: false }
 });
+
+// Garder la connexion active
+setInterval(async () => {
+  try {
+    await pool.query('SELECT 1');
+    console.log('🔄 Connexion MySQL maintenue');
+  } catch (err) {
+    console.error('❌ Keepalive error:', err.message);
+  }
+}, 30000);
 
 module.exports = pool;
