@@ -5,6 +5,18 @@ const mailer = require('../config/mailer');
 
 const genererCode = () => Math.floor(100000 + Math.random() * 900000).toString();
 
+const queryWithRetry = async (query, params, retries = 3) => {
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await pool.query(query, params);
+    } catch (err) {
+      if (i === retries - 1) throw err;
+      console.log(`Retry ${i + 1}...`);
+      await new Promise(r => setTimeout(r, 1000));
+    }
+  }
+};
+
 const envoyerCodeEmail = async (email, nom, code) => {
   await mailer.sendMail({
     from: `"StudyMate AI" <${process.env.GMAIL_USER}>`,
@@ -29,14 +41,14 @@ exports.register = async (req, res) => {
     return res.status(400).json({ message: 'Nom, email et mot de passe requis' });
 
   try {
-    const [existing] = await pool.query('SELECT id, nom, email_verifie FROM users WHERE email = ?', [email]);
+    const [existing] = await queryWithRetry('SELECT id, nom, email_verifie FROM users WHERE email = ?', [email]);
 
     if (existing.length > 0) {
       if (existing[0].email_verifie)
         return res.status(409).json({ message: 'Cet email est déjà utilisé' });
       const code = genererCode();
       const expiration = new Date(Date.now() + 15 * 60 * 1000);
-      await pool.query(
+      await queryWithRetry(
         'UPDATE users SET code_verification = ?, code_expiration = ? WHERE email = ?',
         [code, expiration, email]
       );
@@ -48,7 +60,7 @@ exports.register = async (req, res) => {
     const code = genererCode();
     const expiration = new Date(Date.now() + 15 * 60 * 1000);
 
-    await pool.query(
+    await queryWithRetry(
       'INSERT INTO users (nom, email, password_hash, universite, filiere, niveau, code_verification, code_expiration) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
       [nom, email, hash, universite || null, filiere || null, niveau || null, code, expiration]
     );
@@ -67,7 +79,7 @@ exports.verifierCode = async (req, res) => {
     return res.status(400).json({ message: 'Email et code requis' });
 
   try {
-    const [[user]] = await pool.query('SELECT * FROM users WHERE email = ?', [email]);
+    const [[user]] = await queryWithRetry('SELECT * FROM users WHERE email = ?', [email]);
     if (!user) return res.status(404).json({ message: 'Utilisateur introuvable' });
     if (user.email_verifie) return res.status(400).json({ message: 'Email déjà vérifié' });
     if (user.code_verification !== code)
@@ -75,7 +87,7 @@ exports.verifierCode = async (req, res) => {
     if (new Date() > new Date(user.code_expiration))
       return res.status(400).json({ message: 'Code expiré, demande un nouveau code' });
 
-    await pool.query(
+    await queryWithRetry(
       'UPDATE users SET email_verifie = 1, code_verification = NULL, code_expiration = NULL WHERE id = ?',
       [user.id]
     );
@@ -96,13 +108,13 @@ exports.verifierCode = async (req, res) => {
 exports.renvoyerCode = async (req, res) => {
   const { email } = req.body;
   try {
-    const [[user]] = await pool.query('SELECT * FROM users WHERE email = ?', [email]);
+    const [[user]] = await queryWithRetry('SELECT * FROM users WHERE email = ?', [email]);
     if (!user) return res.status(404).json({ message: 'Utilisateur introuvable' });
     if (user.email_verifie) return res.status(400).json({ message: 'Email déjà vérifié' });
 
     const code = genererCode();
     const expiration = new Date(Date.now() + 15 * 60 * 1000);
-    await pool.query(
+    await queryWithRetry(
       'UPDATE users SET code_verification = ?, code_expiration = ? WHERE id = ?',
       [code, expiration, user.id]
     );
@@ -120,7 +132,7 @@ exports.login = async (req, res) => {
     return res.status(400).json({ message: 'Email et mot de passe requis' });
 
   try {
-    const [rows] = await pool.query('SELECT * FROM users WHERE email = ?', [email]);
+    const [rows] = await queryWithRetry('SELECT * FROM users WHERE email = ?', [email]);
     if (rows.length === 0)
       return res.status(401).json({ message: 'Email ou mot de passe incorrect' });
 
@@ -150,12 +162,12 @@ exports.motDePasseOublie = async (req, res) => {
   if (!email) return res.status(400).json({ message: 'Email requis' });
 
   try {
-    const [[user]] = await pool.query('SELECT * FROM users WHERE email = ?', [email]);
+    const [[user]] = await queryWithRetry('SELECT * FROM users WHERE email = ?', [email]);
     if (!user) return res.status(404).json({ message: 'Aucun compte avec cet email' });
 
     const code = genererCode();
     const expiration = new Date(Date.now() + 15 * 60 * 1000);
-    await pool.query(
+    await queryWithRetry(
       'UPDATE users SET code_verification = ?, code_expiration = ? WHERE id = ?',
       [code, expiration, user.id]
     );
