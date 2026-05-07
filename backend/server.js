@@ -19,12 +19,9 @@ app.use('/api/cours', require('./routes/cours'));
 app.use('/api/quiz', require('./routes/quiz'));
 app.use('/api/dashboard', require('./routes/dashboard'));
 
-const pool = require('./config/db');
-pool.getConnection()
-  .then(conn => {
-    console.log('✅ Connexion MySQL réussie');
-    conn.release();
-  })
+const db = require('./config/db');
+db.query('SELECT 1')
+  .then(() => console.log('✅ Connexion MySQL réussie'))
   .catch(err => console.error('❌ Erreur MySQL:', err.message));
 
 const PORT = process.env.PORT || 5000;
